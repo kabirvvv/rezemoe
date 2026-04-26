@@ -1,11 +1,12 @@
 // ============================================================
-// CONFIGURATION — change API_BASE to your deployed API URL
+// CONFIGURATION
 // ============================================================
 const CONFIG = {
-  API_BASE: "https://animestream-l9smpcwox-kabirvvvs-projects.vercel.app/", // ← Replace with your HiAnime API URL
+  // The Shirayuki Scrapper API V2 — already live, no deployment needed!
+  API_BASE: "https://shirayuki-scrapper-api-v2.vercel.app",
   SITE_NAME: "AniStream",
-  DEFAULT_SERVER: "hd-1",
-  DEFAULT_TYPE: "sub",
+  DEFAULT_SERVER: "hd-1",  // hd-1 = megacloud | hd-2 = vidsrc | hd-3 = mycloud
+  DEFAULT_TYPE: "sub",      // sub | dub
 };
 
 window.CONFIG = CONFIG;
