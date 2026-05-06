@@ -9,7 +9,6 @@ const API = (() => {
     for (let attempt = 0; attempt <= retries; attempt++) {
       try {
         const res = await fetch(`${base()}${endpoint}`);
-        // 500 from the external scraper API — worth retrying once
         if (res.status >= 500 && attempt < retries) {
           await new Promise(r => setTimeout(r, 600 * (attempt + 1)));
           continue;
@@ -46,8 +45,7 @@ const API = (() => {
       get(`/search/suggestion?q=${encodeURIComponent(keyword)}`),
 
     searchAdvanced: (params) => {
-      // Strip undefined, null, and empty-string values so they don't appear
-      // as "season=undefined&language=undefined" in the request (→ 400 error)
+      // Strip undefined/null/empty so they don't become "season=undefined" → 400
       const clean = Object.fromEntries(
         Object.entries(params).filter(([, v]) => v !== undefined && v !== null && v !== "")
       );
@@ -56,7 +54,6 @@ const API = (() => {
     },
 
     // ── Category ──────────────────────────────────────────────
-    // e.g. most-popular, top-airing, recently-updated, most-favorite, completed
     getCategory: (name, page = 1) =>
       get(`/category/${encodeURIComponent(name)}?page=${page}`),
 
@@ -77,14 +74,16 @@ const API = (() => {
       get(`/schedule?date=${date}&tzOffset=${tzOffset}`),
 
     // ── Streaming ─────────────────────────────────────────────
-    // animeEpisodeId format: "steinsgate-3?ep=213"
-    getServers: (animeId, epId) =>
-      get(`/episode/servers?animeEpisodeId=${encodeURIComponent(animeId)}?ep=${epId}`),
+    // API expects: animeEpisodeId = anime slug (e.g. "one-piece-dk6r")
+    //              ep             = episode number (e.g. 1)
+    //              server         = "server-1" | "server-2" | "server-3"
+    //              category       = "sub" | "dub"
+    getServers: (animeId, epNum) =>
+      get(`/episode/servers?animeEpisodeId=${encodeURIComponent(animeId)}&ep=${epNum}`),
 
-    // server: hd-1 | hd-2 | hd-3   category: sub | dub
-    getSources: (animeId, epId, server = "hd-1", category = "sub") =>
+    getSources: (animeId, epNum, server = "server-1", category = "sub") =>
       get(
-        `/episode/sources?animeEpisodeId=${encodeURIComponent(animeId)}&ep=${epId}&server=${encodeURIComponent(server)}&category=${category}`
+        `/episode/sources?animeEpisodeId=${encodeURIComponent(animeId)}&ep=${epNum}&server=${encodeURIComponent(server)}&category=${category}`
       ),
 
     // ── Proxy (bypass CORS on m3u8/media URLs) ────────────────
