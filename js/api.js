@@ -5,14 +5,24 @@
 const API = (() => {
   const base = () => `${window.CONFIG.API_BASE}/api/v2/animekai`;
 
-  const get = async (endpoint) => {
-    const res = await fetch(`${base()}${endpoint}`);
-    if (!res.ok) throw new Error(`HTTP ${res.status}`);
-    const json = await res.json();
-    // Shirayuki returns { success, data } or { success, results } or raw arrays
-    if (json.success === false) throw new Error(json.message || "API error");
-    // Return the most useful key
-    return json.data ?? json.results ?? json;
+  const get = async (endpoint, retries = 2) => {
+    for (let attempt = 0; attempt <= retries; attempt++) {
+      try {
+        const res = await fetch(`${base()}${endpoint}`);
+        // 500 from the external scraper API — worth retrying once
+        if (res.status >= 500 && attempt < retries) {
+          await new Promise(r => setTimeout(r, 600 * (attempt + 1)));
+          continue;
+        }
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        const json = await res.json();
+        if (json.success === false) throw new Error(json.message || "API error");
+        return json.data ?? json.results ?? json;
+      } catch (err) {
+        if (attempt === retries) throw err;
+        await new Promise(r => setTimeout(r, 600 * (attempt + 1)));
+      }
+    }
   };
 
   return {
@@ -36,7 +46,12 @@ const API = (() => {
       get(`/search/suggestion?q=${encodeURIComponent(keyword)}`),
 
     searchAdvanced: (params) => {
-      const qs = new URLSearchParams(params).toString();
+      // Strip undefined, null, and empty-string values so they don't appear
+      // as "season=undefined&language=undefined" in the request (→ 400 error)
+      const clean = Object.fromEntries(
+        Object.entries(params).filter(([, v]) => v !== undefined && v !== null && v !== "")
+      );
+      const qs = new URLSearchParams(clean).toString();
       return get(`/search/advanced?${qs}`);
     },
 
