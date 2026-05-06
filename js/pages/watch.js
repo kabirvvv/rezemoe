@@ -262,7 +262,7 @@ const WatchPage = (() => {
         </iframe>`;
     }
   };
-  };
+  
 
   // Public helper for inline onclick in ep-list
   const _selectById = (id) => {
