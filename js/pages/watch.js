@@ -3,8 +3,8 @@
 // ============================================================
 const WatchPage = (() => {
   let currentAnimeId = null;
-  let currentEpId    = null;
-  let currentEpNum   = null;   // episode number passed to getSources as &ep=
+  let currentEpId    = null;  // episodeId string e.g. "one-piece-dk6r?ep=1" — used for UI highlighting
+  let currentEpNum   = null;  // episode NUMBER e.g. 1 — passed to getSources/getServers
   let allEpisodes    = [];
   let hls            = null;
 
@@ -38,7 +38,6 @@ const WatchPage = (() => {
               <select class="server-select" id="server-select">
                 <option value="server-1">Server 1</option>
                 <option value="server-2">Server 2</option>
-                <option value="server-3">Server 3</option>
               </select>
             </div>
           </div>
@@ -91,13 +90,15 @@ const WatchPage = (() => {
 
     // Load episodes then start player
     await loadEpisodeList(id);
-    const targetEp = ep || (allEpisodes[0] ? getEpId(allEpisodes[0]) : null);
+    const firstEp  = allEpisodes[0];
+    const targetEp = ep
+      ? allEpisodes.find(e => String(getEpNum(e)) === String(ep)) || firstEp
+      : firstEp;
     if (targetEp) {
-      currentEpId  = targetEp;
-      // ep from URL is already a number; otherwise derive it from the first episode object
-      currentEpNum = ep ? ep : (allEpisodes[0] ? getEpNum(allEpisodes[0]) : null);
+      currentEpId  = getEpId(targetEp);
+      currentEpNum = getEpNum(targetEp);
       updateEpLabel();
-      renderEpList(allEpisodes, targetEp);
+      renderEpList(allEpisodes, currentEpId);
       loadPlayer();
     }
   };
@@ -108,7 +109,7 @@ const WatchPage = (() => {
   const getEpNum = (ep) => ep.number || ep.episodeNo || ep.episode || getEpId(ep);
 
   const getServerValue = () =>
-    document.getElementById("server-select")?.value || "server-1";
+    document.getElementById("server-select")?.value || CONFIG.DEFAULT_SERVER;
 
   const getTypeValue = () =>
     document.querySelector(".type-btn--active")?.dataset.type || CONFIG.DEFAULT_TYPE;
@@ -176,36 +177,39 @@ const WatchPage = (() => {
     currentEpNum = getEpNum(ep);
     updateEpLabel();
     renderEpList(allEpisodes, currentEpId);
-    window.history.replaceState(null, "", `#watch?id=${encodeURIComponent(currentAnimeId)}&ep=${currentEpId}`);
+    window.history.replaceState(null, "", `#watch?id=${encodeURIComponent(currentAnimeId)}&ep=${currentEpNum}`);
     loadPlayer();
   };
 
   // ── Player ─────────────────────────────────────────────────
   const loadPlayer = async () => {
     const wrap = document.getElementById("player-wrap");
-    if (!wrap || !currentEpId) return;
+    if (!wrap || !currentEpNum) return;
     wrap.innerHTML = `<div class="player-loader"><div class="spinner"></div></div>`;
 
     const server   = getServerValue();
     const category = getTypeValue();
 
     try {
+      // getSources needs the episode NUMBER (1, 2, 3…), not the episodeId string
       const raw = await API.getSources(currentAnimeId, currentEpNum, server, category);
-      // Shirayuki sources shape:
-      // { sources: [{url, isM3U8}], tracks: [{file, label, kind, default}], intro, outro }
-      const sources = raw.sources || raw.streamingLink || [];
-      const tracks  = raw.tracks  || raw.subtitles     || [];
 
-      const src = sources[0]?.url || sources[0]?.file;
-      if (!src) {
+      // Actual response shape: { sources: [{ source, embed, type, referer }], tracks, intro, outro }
+      const sources = raw.sources || [];
+      const tracks  = raw.tracks  || [];
+
+      // The source is an iframe URL (type: "iframe") — embed it directly
+      const embedUrl = sources[0]?.embed || sources[0]?.source;
+
+      if (!embedUrl) {
         wrap.innerHTML = `<div class="player-err">
-          <p>No stream found for ${server.toUpperCase()} (${category.toUpperCase()}).</p>
-          <small>Try a different server or type.</small>
+          <p>No stream found for <strong>${server}</strong> (${category.toUpperCase()}).</p>
+          <small>Try a different server or language type.</small>
         </div>`;
         return;
       }
 
-      initPlayer(wrap, src, tracks, sources[0]?.isM3U8 !== false);
+      initPlayer(wrap, embedUrl, tracks);
     } catch (e) {
       wrap.innerHTML = `<div class="player-err">
         <p>Stream unavailable.</p>
@@ -214,35 +218,50 @@ const WatchPage = (() => {
     }
   };
 
-  const initPlayer = (wrap, src, tracks, isHLS) => {
+  // Sources are iframe embeds — render as <iframe> rather than <video>
+  const initPlayer = (wrap, embedUrl, tracks) => {
     if (hls) { hls.destroy(); hls = null; }
-    wrap.innerHTML = `<video id="anime-video" class="video-player" controls playsinline></video>`;
-    const video = document.getElementById("anime-video");
 
-    if (isHLS && window.Hls?.isSupported()) {
-      hls = new Hls({ maxBufferLength: 30 });
-      hls.loadSource(src);
-      hls.attachMedia(video);
-      hls.on(Hls.Events.MANIFEST_PARSED, () => video.play().catch(() => {}));
-    } else if (video.canPlayType("application/vnd.apple.mpegurl")) {
-      video.src = src;
-      video.addEventListener("loadedmetadata", () => video.play().catch(() => {}));
+    // Try native video first (some servers return direct .m3u8 or .mp4)
+    const isDirectMedia = /\.(m3u8|mp4|webm)(\?|$)/i.test(embedUrl);
+
+    if (isDirectMedia && window.Hls?.isSupported()) {
+      wrap.innerHTML = `<video id="anime-video" class="video-player" controls playsinline></video>`;
+      const video = document.getElementById("anime-video");
+      if (/\.m3u8/i.test(embedUrl)) {
+        hls = new Hls({ maxBufferLength: 30 });
+        hls.loadSource(embedUrl);
+        hls.attachMedia(video);
+        hls.on(Hls.Events.MANIFEST_PARSED, () => video.play().catch(() => {}));
+      } else {
+        video.src = embedUrl;
+        video.play().catch(() => {});
+      }
+      tracks.forEach((t) => {
+        if (!t.file && !t.src) return;
+        const track = document.createElement("track");
+        track.kind    = t.kind    || "subtitles";
+        track.label   = t.label   || "Sub";
+        track.src     = t.file    || t.src;
+        track.srclang = t.lang    || "en";
+        if (t.default) track.default = true;
+        video.appendChild(track);
+      });
     } else {
-      video.src = src;
-      video.play().catch(() => {});
+      // Iframe embed (Megacloud, anikai iframe, etc.)
+      wrap.innerHTML = `
+        <iframe
+          id="anime-iframe"
+          class="video-player"
+          src="${embedUrl}"
+          allowfullscreen
+          allow="autoplay; fullscreen; picture-in-picture"
+          referrerpolicy="no-referrer"
+          frameborder="0"
+          style="width:100%;height:100%;border:none;aspect-ratio:16/9;display:block">
+        </iframe>`;
     }
-
-    // Add subtitle tracks
-    tracks.forEach((t) => {
-      if (!t.file && !t.src) return;
-      const track = document.createElement("track");
-      track.kind    = t.kind    || "subtitles";
-      track.label   = t.label   || "Sub";
-      track.src     = t.file    || t.src;
-      track.srclang = t.lang    || "en";
-      if (t.default) track.default = true;
-      video.appendChild(track);
-    });
+  };
   };
 
   // Public helper for inline onclick in ep-list
