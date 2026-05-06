@@ -1,6 +1,5 @@
 // ============================================================
 // API SERVICE — Shirayuki Scrapper API V2
-// Base: /api/v2/animekai/
 // ============================================================
 const API = (() => {
   const base = () => `${window.CONFIG.API_BASE}/api/v2/animekai`;
@@ -15,7 +14,9 @@ const API = (() => {
         }
         if (!res.ok) throw new Error(`HTTP ${res.status}`);
         const json = await res.json();
-        if (json.success === false) throw new Error(json.message || "API error");
+        if (json.success === false) throw new Error(json.message || json.error || "API error");
+        // Schedule returns { success, schedule, requestedDate } — no data wrapper
+        if (json.schedule) return json;
         return json.data ?? json.results ?? json;
       } catch (err) {
         if (attempt === retries) throw err;
@@ -25,19 +26,11 @@ const API = (() => {
   };
 
   return {
-    // ── Home ──────────────────────────────────────────────────
-    getHome: () => get("/home"),
-
-    // ── Anime details ─────────────────────────────────────────
+    getHome:    ()     => get("/home"),
     getAnimeInfo: (id) => get(`/anime/${encodeURIComponent(id)}`),
-
-    // ── Episodes ──────────────────────────────────────────────
-    getEpisodes: (id) => get(`/anime/${encodeURIComponent(id)}/episodes`),
-
-    // ── Next episode schedule ──────────────────────────────────
+    getEpisodes:  (id) => get(`/anime/${encodeURIComponent(id)}/episodes`),
     getNextEpisode: (id) => get(`/anime/${encodeURIComponent(id)}/next-episode-schedule`),
 
-    // ── Search ────────────────────────────────────────────────
     search: (keyword, page = 1) =>
       get(`/search?q=${encodeURIComponent(keyword)}&page=${page}`),
 
@@ -45,50 +38,35 @@ const API = (() => {
       get(`/search/suggestion?q=${encodeURIComponent(keyword)}`),
 
     searchAdvanced: (params) => {
-      // Strip undefined/null/empty so they don't become "season=undefined" → 400
       const clean = Object.fromEntries(
         Object.entries(params).filter(([, v]) => v !== undefined && v !== null && v !== "")
       );
-      const qs = new URLSearchParams(clean).toString();
-      return get(`/search/advanced?${qs}`);
+      return get(`/search/advanced?${new URLSearchParams(clean)}`);
     },
 
-    // ── Category ──────────────────────────────────────────────
     getCategory: (name, page = 1) =>
       get(`/category/${encodeURIComponent(name)}?page=${page}`),
 
-    // ── Genre ─────────────────────────────────────────────────
     getGenre: (name, page = 1) =>
       get(`/genre/${encodeURIComponent(name)}?page=${page}`),
 
-    // ── Producer / Studio ─────────────────────────────────────
     getProducer: (name, page = 1) =>
       get(`/producer/${encodeURIComponent(name)}?page=${page}`),
 
-    // ── A-Z List ──────────────────────────────────────────────
     getAZList: (sort = "all", page = 1) =>
       get(`/azlist/${encodeURIComponent(sort)}?page=${page}`),
 
-    // ── Schedule ──────────────────────────────────────────────
     getSchedule: (date, tzOffset = 0) =>
       get(`/schedule?date=${date}&tzOffset=${tzOffset}`),
 
-    // ── Streaming ─────────────────────────────────────────────
-    // API expects: animeEpisodeId = anime slug (e.g. "one-piece-dk6r")
-    //              ep             = episode number (e.g. 1)
-    //              server         = "server-1" | "server-2" | "server-3"
-    //              category       = "sub" | "dub"
+    // epNum = episode NUMBER (1, 2, 3…) — NOT the episodeId string
     getServers: (animeId, epNum) =>
       get(`/episode/servers?animeEpisodeId=${encodeURIComponent(animeId)}&ep=${epNum}`),
 
     getSources: (animeId, epNum, server = "server-1", category = "sub") =>
-      get(
-        `/episode/sources?animeEpisodeId=${encodeURIComponent(animeId)}&ep=${epNum}&server=${encodeURIComponent(server)}&category=${category}`
-      ),
+      get(`/episode/sources?animeEpisodeId=${encodeURIComponent(animeId)}&ep=${epNum}&server=${encodeURIComponent(server)}&category=${category}`),
 
-    // ── Proxy (bypass CORS on m3u8/media URLs) ────────────────
-    proxy: (url) =>
-      `${base()}/proxy?url=${encodeURIComponent(url)}`,
+    proxy: (url) => `${base()}/proxy?url=${encodeURIComponent(url)}`,
   };
 })();
 
