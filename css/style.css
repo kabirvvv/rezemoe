@@ -1040,22 +1040,13 @@ input { font-family: var(--font-body); }
    FOOTER
    ============================================================ */
 .footer {
+  background: var(--bg-2);
+  border-top: 1px solid var(--border);
+  padding: 32px;
   text-align: center;
-  padding: 40px 20px 20px;
 }
-
-.footer-image-container {
-  display: flex;
-  justify-content: center;
-  margin-bottom: 15px; /* Adds a little space between the image and the REZEMOE text */
-}
-
-.footer-art {
-  max-width: 100%; /* Ensures it shrinks on mobile devices */
-  width: 600px;    /* Adjust this value to make the image larger or smaller */
-  height: auto;
-  object-fit: contain;
-}
+.footer p { font-size: 12px; color: var(--text-3); }
+.footer a { color: var(--accent); }
 
 /* ============================================================
    RESPONSIVE — TABLET (≤1100px)
