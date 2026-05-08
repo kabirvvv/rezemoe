@@ -1,10 +1,6 @@
-
-// ============================================================
-// APP — RezeMoe
-// ============================================================
 document.addEventListener("DOMContentLoaded", () => {
 
-  // ── Navbar: hide on scroll down, show on scroll up ────────
+  // ── Navbar: hide on scroll down, show on scroll up
   const navbar = document.querySelector(".navbar");
   let lastScrollY = 0;
   let ticking = false;
@@ -25,7 +21,7 @@ document.addEventListener("DOMContentLoaded", () => {
     }
   }, { passive: true });
 
-  // ── Reveal on scroll (IntersectionObserver) ───────────────
+  // ── Reveal on scroll
   const revealObserver = new IntersectionObserver((entries) => {
     entries.forEach((entry) => {
       if (entry.isIntersecting) {
@@ -35,14 +31,13 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   }, { threshold: 0.1, rootMargin: "0px 0px -40px 0px" });
 
-  // Observe new elements whenever content changes
   window.observeReveal = () => {
     document.querySelectorAll(".reveal:not(.visible)").forEach((el) => {
       revealObserver.observe(el);
     });
   };
 
-  // ── Navbar search with live suggestions ───────────────────
+  // ── Navbar search
   const navSearch  = document.getElementById("nav-search");
   const navInput   = document.getElementById("nav-search-input");
   const navBtn     = document.getElementById("nav-search-btn");
@@ -81,10 +76,10 @@ document.addEventListener("DOMContentLoaded", () => {
       if (!items.length) { hideSuggestions(); return; }
 
       suggestBox.innerHTML = items.slice(0, 8).map((s) => {
-        const id     = s.id    || s.animeId || "";
-        const title  = s.name  || s.title   || "";
-        const poster = s.poster|| s.image   || "";
-        const type   = s.type  || "";
+        const id     = s.id     || s.animeId || "";
+        const title  = s.name   || s.title   || "";
+        const poster = s.poster || s.image   || "";
+        const type   = s.type   || "";
         return `
           <div class="suggest-item"
                onclick="Router.navigate('watch?id=${encodeURIComponent(id)}');hideSuggestions()">
@@ -103,7 +98,7 @@ document.addEventListener("DOMContentLoaded", () => {
   window.hideSuggestions = () =>
     suggestBox?.classList.remove("suggest-box--open");
 
-  // ── Mobile burger ──────────────────────────────────────────
+  // ── Mobile burger
   const burger   = document.getElementById("burger");
   const navLinks = document.getElementById("nav-links");
   burger?.addEventListener("click", () => {
@@ -117,7 +112,7 @@ document.addEventListener("DOMContentLoaded", () => {
     })
   );
 
-  // ── Ripple effect on buttons ───────────────────────────────
+  // ── Ripple effect on buttons
   document.addEventListener("click", (e) => {
     const btn = e.target.closest(".btn");
     if (!btn) return;
@@ -145,26 +140,25 @@ document.addEventListener("DOMContentLoaded", () => {
     ripple.addEventListener("animationend", () => ripple.remove());
   });
 
-  // ── Page transition wrapper ────────────────────────────────
+  // ── Page transition
   const mainContent = document.getElementById("main-content");
   const origRender  = UI.render.bind(UI);
   UI.render = (html) => {
     mainContent?.classList.remove("page-enter");
-    void mainContent?.offsetWidth; // reflow
+    void mainContent?.offsetWidth;
     mainContent?.classList.add("page-enter");
     origRender(html);
-    // Run reveal observer after paint
     requestAnimationFrame(() => requestAnimationFrame(() => window.observeReveal()));
   };
 
-  // ── Active nav highlighting ────────────────────────────────
+  // ── Active nav
   const highlightNav = (path) => {
     document.querySelectorAll(".nav-link").forEach((l) =>
       l.classList.toggle("nav-link--active", l.dataset.route === path)
     );
   };
 
-  // ── Routes ─────────────────────────────────────────────────
+  // ── Routes
   Router.on("home",     (p) => { highlightNav("home");     HomePage.render(p);     });
   Router.on("anime",    (p) => { highlightNav("anime");    AnimePage.render(p);    });
   Router.on("watch",    (p) => { highlightNav("watch");    WatchPage.render(p);    });
@@ -185,5 +179,3 @@ document.addEventListener("DOMContentLoaded", () => {
 
   Router.dispatch();
 });
-JSEOF
-echo "Done"
