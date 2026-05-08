@@ -75,7 +75,7 @@ select, input { font-family:var(--font-body); }
 
 .nav-logo { display:flex; align-items:center; text-decoration:none; flex-shrink:0; transition:opacity var(--transition),transform var(--transition); }
 .nav-logo:hover { opacity:0.88; transform:scale(1.03); }
-.nav-logo__img { height:60px; width:auto; max-width:200px; object-fit:contain; border-radius:20px; display:block; filter:drop-shadow(0 0 8px rgba(168,85,247,0.3)); }
+.nav-logo__img { height:60px; width:auto; max-width:200px; object-fit:contain; border-radius:20px; display:circle; filter:drop-shadow(0 0 8px rgba(168,85,247,0.3)); }
 
 .nav-links { display:flex; align-items:center; gap:2px; list-style:none; }
 .nav-link { padding:7px 14px; border-radius:var(--radius); font-size:14px; font-weight:500; color:var(--text-2); transition:color var(--transition),background var(--transition); white-space:nowrap; position:relative; }
