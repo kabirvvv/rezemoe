@@ -392,9 +392,9 @@ select, input { font-family:var(--font-body); }
   .nav-link { width:100%; padding:12px 16px; font-size:15px; border-radius:10px; }
   .nav-link::after { display:none; }
   .burger { display:flex; }
-  .nav-search { width:40px; overflow:hidden; transition:width 0.3s ease; border-radius:10px; }
+  .nav-search { width:60px; overflow:hidden; transition:width 0.3s ease; border-radius:10px; }
   .nav-search:focus-within { width:200px; }
-  .nav-search-input { padding:9px 10px; font-size:14px; }
+  .nav-search-input { padding:15px 16px; font-size:14px; }
   .spotlight__inner { height:70vh; min-height:400px; }
   .spotlight__content { left:18px; right:18px; max-width:none; bottom:64px; }
   .spotlight__title { font-size:clamp(24px,7vw,38px); }
