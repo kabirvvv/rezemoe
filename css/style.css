@@ -475,7 +475,6 @@ select, input { font-family:var(--font-body); }
   .spotlight__actions .btn { width:100%; justify-content:center; }
   .trending-row { grid-template-columns:1fr; }
 }
-/* These are sometimes missed — add inside your CSS if not present */
 
 /* Sidebar info ID selector (watch page) */
 #sidebar-info { flex:1; }
