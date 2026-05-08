@@ -156,7 +156,7 @@ select, input { font-family:var(--font-body); }
 
 /* SECTIONS */
 .home-section { padding:40px 32px; max-width:1400px; margin:0 auto; }
-.section-header { display:flex; align-items:center; justify-content:space-between; margin-bottom:22px; }
+.section-header { display:flex; align-items:center; justify-content:space-between; margin-bottom:30px; }
 .section-title { font-family:var(--font-display); font-size:22px; letter-spacing:1.5px; display:flex; align-items:center; gap:12px; background:linear-gradient(90deg,var(--text),var(--text-2)); -webkit-background-clip:text; -webkit-text-fill-color:transparent; background-clip:text; }
 .section-accent { display:inline-block; width:4px; height:22px; background:linear-gradient(to bottom,var(--accent),var(--gold)); border-radius:2px; box-shadow:0 0 10px var(--accent-glow); -webkit-text-fill-color:initial; flex-shrink:0; }
 .section-more { display:flex; align-items:center; gap:4px; font-size:12px; font-weight:600; color:var(--text-3); letter-spacing:0.5px; text-transform:uppercase; padding:6px 12px; border-radius:20px; border:1px solid var(--border); transition:all var(--transition); }
