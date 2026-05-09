@@ -19,6 +19,15 @@ const CategoryPage = (() => {
     "special":          "Specials",
     "music":            "Music",
   };
+  const SLUG_MAP = {
+  "top-airing":    "tv",
+  "most-popular":  "tv",
+  "most-favorite": "tv",
+  "recently-added":"tv",
+  "top-upcoming":  "tv",
+  "subbed-anime":  "tv",
+  "dubbed-anime":  "tv",
+};
 
   const render = async ({ c, page = "1" }) => {
     if (!c) { Router.navigate("home"); return; }
