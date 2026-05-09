@@ -47,7 +47,7 @@ const SchedulePage = (() => {
     try {
       const raw   = await API.getSchedule(date, tzOffset);
       // shape: { scheduledAnimes: [{id, name, episode, time, ...}] }
-      const items = raw.scheduledAnimes || raw.animes || (Array.isArray(raw) ? raw : []);
+    const items = raw.schedule || raw.scheduledAnimes || raw.animes || (Array.isArray(raw) ? raw : []);
 
       list.innerHTML = items.length
         ? items.map((item) => {
