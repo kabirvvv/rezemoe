@@ -67,7 +67,7 @@ const FilterPage = (() => {
     const v = (id) => document.getElementById(id)?.value || undefined;
     const genres = [...document.querySelectorAll(".genre-chip--active")].map((c) => c.dataset.genre).join(",") || undefined;
     return {
-      q:        "",
+     
       type:     v("f-type"),
       status:   v("f-status"),
       rated:    v("f-rated"),
