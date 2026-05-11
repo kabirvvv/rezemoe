@@ -145,6 +145,24 @@ const WatchPage = (() => {
       ), currentEpId);
     });
 
+    // ── MegaPlay postMessage listener (auto-next & progress tracking) ──
+    window.addEventListener("message", function (event) {
+      if (event.origin !== "https://megaplay.buzz") return;
+      let data = event.data;
+      if (typeof data === "string") {
+        try { data = JSON.parse(data); } catch (e) { return; }
+      }
+      if (data.channel === "megacloud") {
+        if (data.event === "complete") {
+          const idx = allEpisodes.findIndex((e) => String(getEpId(e)) === String(currentEpId));
+          if (idx >= 0 && idx < allEpisodes.length - 1) selectEp(allEpisodes[idx + 1]);
+        }
+      }
+      if (data.type === "watching-log") {
+        // watch time available: data.currentTime, data.duration
+      }
+    });
+
     // Load sidebar anime info
     loadSidebarInfo(id);
 
@@ -249,35 +267,15 @@ const WatchPage = (() => {
   };
 
   // ── Player ─────────────────────────────────────────────────
-  const loadPlayer = async () => {
+  const loadPlayer = () => {
     const wrap = document.getElementById("player-wrap");
-    if (!wrap || !currentEpNum) return;
+    if (!wrap || !currentEpId) return;
     wrap.innerHTML = `<div class="player-loader" style="display:flex; height:100%; justify-content:center; align-items:center;"><div class="spinner">Loading...</div></div>`;
 
-    const server   = getServerValue();
     const category = getTypeValue();
+    const embedUrl = `https://megaplay.buzz/stream/s-2/${currentEpId}/${category}`;
 
-    try {
-      const raw = await API.getSources(currentAnimeId, currentEpNum, server, category);
-      const sources = raw.sources || [];
-      const tracks  = raw.tracks  || [];
-      const embedUrl = sources[0]?.embed || sources[0]?.source;
-
-      if (!embedUrl) {
-        wrap.innerHTML = `<div class="player-err" style="display:flex; flex-direction:column; justify-content:center; align-items:center; height:100%; text-align:center; padding:20px;">
-          <p style="margin:0 0 10px;">No stream found for <strong>${server}</strong> (${category.toUpperCase()}).</p>
-          <small style="opacity:0.7;">Try a different server or language type.</small>
-        </div>`;
-        return;
-      }
-
-      initPlayer(wrap, embedUrl, tracks);
-    } catch (e) {
-      wrap.innerHTML = `<div class="player-err" style="display:flex; flex-direction:column; justify-content:center; align-items:center; height:100%; text-align:center; padding:20px;">
-        <p style="margin:0 0 10px;">Stream unavailable.</p>
-        <small style="opacity:0.7;">${e.message}</small>
-      </div>`;
-    }
+    initPlayer(wrap, embedUrl, []);
   };
 
   const initPlayer = (wrap, embedUrl, tracks) => {
