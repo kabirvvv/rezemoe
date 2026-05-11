@@ -266,16 +266,44 @@ const WatchPage = (() => {
     loadPlayer();
   };
 
+  // ── Anikoto episode cache (avoid re-fetching on every episode switch) ────
+  let anikotoEpisodesCache = null;
+  let anikotoCachedId = null;
+
   // ── Player ─────────────────────────────────────────────────
-  const loadPlayer = () => {
+  const loadPlayer = async () => {
     const wrap = document.getElementById("player-wrap");
-    if (!wrap || !currentEpId) return;
+    if (!wrap || !currentEpNum) return;
     wrap.innerHTML = `<div class="player-loader" style="display:flex; height:100%; justify-content:center; align-items:center;"><div class="spinner">Loading...</div></div>`;
 
     const category = getTypeValue();
-    const embedUrl = `https://megaplay.buzz/stream/s-2/${currentEpId}/${category}`;
 
-    initPlayer(wrap, embedUrl, []);
+    try {
+      // Fetch episode list from Anikoto to get the correct episode_embed_id
+      // required by MegaPlay /stream/s-2/ endpoint (per MegaPlay docs)
+      if (anikotoCachedId !== currentAnimeId) {
+        const res = await fetch(`https://anikotoapi.site/series/${encodeURIComponent(currentAnimeId)}`);
+        if (!res.ok) throw new Error(`Anikoto API returned ${res.status}`);
+        const data = await res.json();
+        anikotoEpisodesCache = data.episodes || data.data?.episodes || [];
+        anikotoCachedId = currentAnimeId;
+      }
+
+      const ep = anikotoEpisodesCache.find(e =>
+        String(e.number ?? e.episode_number ?? e.episodeNo) === String(currentEpNum)
+      );
+
+      const embedId = ep?.episode_embed_id;
+      if (!embedId) throw new Error(`No embed ID found for episode ${currentEpNum}`);
+
+      const embedUrl = `https://megaplay.buzz/stream/s-2/${embedId}/${category}`;
+      initPlayer(wrap, embedUrl, []);
+    } catch (e) {
+      wrap.innerHTML = `<div class="player-err" style="display:flex; flex-direction:column; justify-content:center; align-items:center; height:100%; text-align:center; padding:20px;">
+        <p style="margin:0 0 10px;">Stream unavailable.</p>
+        <small style="opacity:0.7;">${e.message}</small>
+      </div>`;
+    }
   };
 
   const initPlayer = (wrap, embedUrl, tracks) => {
