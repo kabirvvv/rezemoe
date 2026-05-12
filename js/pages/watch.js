@@ -279,24 +279,7 @@ const WatchPage = (() => {
     const category = getTypeValue();
 
     try {
-      // Fetch episode list from Anikoto to get the correct episode_embed_id
-      // required by MegaPlay /stream/s-2/ endpoint (per MegaPlay docs)
-      if (anikotoCachedId !== currentAnimeId) {
-        const res = await fetch(`https://anikotoapi.site/series/${encodeURIComponent(currentAnimeId)}`);
-        if (!res.ok) throw new Error(`Anikoto API returned ${res.status}`);
-        const data = await res.json();
-        anikotoEpisodesCache = data.episodes || data.data?.episodes || [];
-        anikotoCachedId = currentAnimeId;
-      }
-
-      const ep = anikotoEpisodesCache.find(e =>
-        String(e.number ?? e.episode_number ?? e.episodeNo) === String(currentEpNum)
-      );
-
-      const embedId = ep?.episode_embed_id;
-      if (!embedId) throw new Error(`No embed ID found for episode ${currentEpNum}`);
-
-      const embedUrl = `https://megaplay.buzz/stream/s-2/${embedId}/${category}`;
+      const embedUrl = `https://reanime.to/api/flix/${currentAnimeId}/${currentEpNum}`;
       initPlayer(wrap, embedUrl, []);
     } catch (e) {
       wrap.innerHTML = `<div class="player-err" style="display:flex; flex-direction:column; justify-content:center; align-items:center; height:100%; text-align:center; padding:20px;">
@@ -356,3 +339,4 @@ const WatchPage = (() => {
 })();
 
 window.WatchPage = WatchPage;
+        
