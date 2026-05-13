@@ -187,3 +187,4 @@ const AnimePage = (() => {
 })();
 
 window.AnimePage = AnimePage;
+                    
