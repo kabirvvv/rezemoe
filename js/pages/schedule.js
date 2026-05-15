@@ -1,11 +1,10 @@
 // ============================================================
-// SCHEDULE PAGE — Shirayuki Scrapper API V2
+// SCHEDULE PAGE — AniList airing schedule
 // ============================================================
 const SchedulePage = (() => {
   const render = async () => {
     UI.setTitle("Schedule");
-    const today  = new Date().toISOString().split("T")[0];
-    const tzOff  = -new Date().getTimezoneOffset(); // minutes, matching Shirayuki
+    const today = new Date().toISOString().split("T")[0];
 
     const days = Array.from({ length: 7 }, (_, i) => {
       const d = new Date();
@@ -29,32 +28,32 @@ const SchedulePage = (() => {
 
     document.querySelectorAll(".sched-tab").forEach((tab) => {
       tab.addEventListener("click", () => {
-        document.querySelectorAll(".sched-tab").forEach((t) => t.classList.remove("sched-tab--active"));
+        document.querySelectorAll(".sched-tab").forEach(t => t.classList.remove("sched-tab--active"));
         tab.classList.add("sched-tab--active");
-        loadSchedule(tab.dataset.date, tzOff);
+        loadSchedule(tab.dataset.date);
       });
     });
 
-    loadSchedule(today, tzOff);
+    loadSchedule(today);
   };
 
   const skeletonRows = () =>
     Array(8).fill(`<div class="sched-item sched-item--skel skeleton-box"></div>`).join("");
 
-  const loadSchedule = async (date, tzOffset) => {
+  const loadSchedule = async (date) => {
     const list = document.getElementById("sched-list");
     list.innerHTML = skeletonRows();
     try {
-      const raw   = await API.getSchedule(date, tzOffset);
-      // shape: { scheduledAnimes: [{id, name, episode, time, ...}] }
-    const items = raw.schedule || raw.scheduledAnimes || raw.animes || (Array.isArray(raw) ? raw : []);
+      const raw   = await API.getSchedule(date);
+      // AniList returns { schedule: [{ id, name, episode, time, airingAt, poster }] }
+      const items = raw.schedule || [];
 
       list.innerHTML = items.length
         ? items.map((item) => {
-            const id    = item.id || item.animeId || "";
-            const title = item.name || item.title || "";
-            const ep    = item.episode || item.episodeNo || "?";
-            const time  = item.time || "--:--";
+            const id    = item.id    || "";
+            const title = item.name  || item.title || "";
+            const ep    = item.episode || "?";
+            const time  = item.time  || "--:--";
             return `
               <a class="sched-item" href="#anime?id=${encodeURIComponent(id)}"
                  onclick="event.preventDefault();Router.navigate('anime?id=${encodeURIComponent(id)}')">
@@ -66,7 +65,7 @@ const SchedulePage = (() => {
                 </svg>
               </a>`;
           }).join("")
-        : `<div class="empty-state"><p>No schedule data for this day.</p></div>`;
+        : `<div class="empty-state"><p>No scheduled airings for this day.</p></div>`;
     } catch (e) {
       list.innerHTML = `<div class="error-text">Failed to load schedule: ${e.message}</div>`;
     }
