@@ -180,7 +180,13 @@ const updateEpLabel = () => {
 
     try {
       const apiUrl = `https://reanime.to/api/flix/${encodeURIComponent(currentAnimeId)}/${currentEpNum}`;
-      const res = await fetch(API.proxy(apiUrl));
+      const res = await fetch(API.proxy(apiUrl), {
+        headers: {
+          "Referer":          "https://reanime.to/",
+          "Origin":           "https://reanime.to/",
+          "X-Requested-With": "XMLHttpRequest",
+        },
+      });
       if (!res.ok) throw new Error(`API error ${res.status}`);
       const data = await res.json();
 
@@ -219,3 +225,4 @@ const updateEpLabel = () => {
 })();
 
 window.WatchPage = WatchPage;
+    
