@@ -370,7 +370,7 @@ const API = (() => {
   const getSources     = () => Promise.resolve({});
   const getProducer    = (name, page) => getCategory("most-popular", page);
   const getAZList      = (sort, page)  => getCategory("most-popular", page);
-  const proxy          = (url) => url;
+  const proxy          = (url) => `https://corsproxy.io/?url=${encodeURIComponent(url)}`;
 
   return {
     getHome, getAnimeInfo, getEpisodes, getNextEpisode,
@@ -381,4 +381,4 @@ const API = (() => {
 })();
 
 window.API = API;
-        
+                             
