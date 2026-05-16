@@ -181,9 +181,18 @@ const updateEpLabel = () => {
     try {
       const apiUrl = `https://reanime.to/api/flix/${encodeURIComponent(currentAnimeId)}/${currentEpNum}`;
       const res  = await fetch(`https://corsproxy.io/?${encodeURIComponent(apiUrl)}`);
-      const json = await res.json();
+      const raw  = await res.text();
+      console.log("[reanime raw]", raw);
 
-      if (!json.success || !json.servers?.length) throw new Error("No servers returned");
+      let json;
+      try { json = JSON.parse(raw); } catch { throw new Error("Invalid JSON: " + raw.slice(0, 200)); }
+
+      // Handle allorigins-style wrapper { contents: "..." }
+      if (json.contents) json = JSON.parse(json.contents);
+
+      console.log("[reanime json]", json);
+
+      if (!json.success || !json.servers?.length) throw new Error("No servers returned: " + JSON.stringify(json));
 
       // Prefer sub server, fall back to first available
       const server = json.servers.find(s => s.dataType === "sub") || json.servers[0];
