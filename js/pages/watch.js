@@ -172,22 +172,42 @@ const updateEpLabel = () => {
     loadPlayer();
   };
 
-  // ── Player — reanime uses AniList ID + episode number only ──
-  const loadPlayer = () => {
+  // ── Player — fetch reanime API, parse dataLink, inject into iframe ──
+  const loadPlayer = async () => {
     const wrap = document.getElementById("player-wrap");
     if (!wrap || !currentEpNum) return;
+    wrap.innerHTML = `<div class="player-loader" style="display:flex; height:100%; justify-content:center; align-items:center;"><div class="spinner">Loading...</div></div>`;
 
-    wrap.innerHTML = `
-      <iframe
-        id="anime-iframe"
-        class="video-player"
-        src="https://reanime.to/api/flix/${currentAnimeId}/${currentEpNum}"
-        allowfullscreen
-        allow="autoplay; fullscreen; picture-in-picture"
-        referrerpolicy="no-referrer"
-        frameborder="0"
-        style="width:100%;height:100%;border:none;display:block;">
-      </iframe>`;
+    try {
+      const apiUrl = `https://reanime.to/api/flix/${encodeURIComponent(currentAnimeId)}/${currentEpNum}`;
+      const res = await fetch(apiUrl);
+      if (!res.ok) throw new Error(`API error ${res.status}`);
+      const data = await res.json();
+
+      // Extract the embed URL — dataLink is the primary field
+      const embedUrl = data.dataLink || data.link || data.url || data.embed;
+      if (!embedUrl) throw new Error("No dataLink found in API response");
+
+      wrap.innerHTML = `
+        <iframe
+          id="anime-iframe"
+          class="video-player"
+          src="${embedUrl}"
+          allowfullscreen
+          allow="autoplay; fullscreen; picture-in-picture"
+          referrerpolicy="no-referrer"
+          frameborder="0"
+          style="width:100%; height:100%; border:none; display:block;">
+        </iframe>`;
+    } catch (err) {
+      wrap.innerHTML = `
+        <div style="display:flex; height:100%; justify-content:center; align-items:center;
+                    color:#fff; flex-direction:column; gap:10px; padding:20px; text-align:center;">
+          <span style="font-size:1.5rem;">⚠️</span>
+          <span style="font-weight:600;">Failed to load player</span>
+          <span style="opacity:0.6; font-size:0.85rem;">${err.message}</span>
+        </div>`;
+    }
   };
 
   const _selectByNum = (num) => {
@@ -199,3 +219,4 @@ const updateEpLabel = () => {
 })();
 
 window.WatchPage = WatchPage;
+    
