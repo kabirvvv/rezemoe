@@ -172,7 +172,7 @@ const updateEpLabel = () => {
     loadPlayer();
   };
 
-  // ── Player — fetch reanime API, parse dataLink, inject into iframe ──
+  // ── Player — fetch reanime API (JSON or ZIP), inject into iframe ──
   const loadPlayer = async () => {
     const wrap = document.getElementById("player-wrap");
     if (!wrap || !currentEpNum) return;
@@ -182,11 +182,71 @@ const updateEpLabel = () => {
       const apiUrl = `https://reanime.to/api/flix/${encodeURIComponent(currentAnimeId)}/${currentEpNum}`;
       const res = await fetch(API.proxy(apiUrl));
       if (!res.ok) throw new Error(`API error ${res.status}`);
-      const data = await res.json();
 
-      // Extract the embed URL — dataLink is the primary field
-      const embedUrl = data.dataLink || data.link || data.url || data.embed;
-      if (!embedUrl) throw new Error("No dataLink found in API response");
+      const contentType = res.headers.get("content-type") || "";
+      let embedUrl = null;
+
+      // ── ZIP path (new reanime behaviour) ────────────────────────────────
+      if (
+        contentType.includes("application/zip") ||
+        contentType.includes("application/octet-stream") ||
+        contentType.includes("application/x-zip")
+      ) {
+        const buffer = await res.arrayBuffer();
+
+        // Confirm ZIP magic bytes (PK\x03\x04) in case content-type is wrong
+        const magic = new Uint8Array(buffer, 0, 4);
+        if (magic[0] !== 0x50 || magic[1] !== 0x4B) throw new Error("Unexpected binary format from API");
+
+        const zip = await JSZip.loadAsync(buffer);
+        const extracted = {};
+
+        await Promise.all(
+          Object.entries(zip.files).map(async ([name, file]) => {
+            if (file.dir) return;
+            const text = await file.async("string");
+            try { extracted[name] = JSON.parse(text); }
+            catch { extracted[name] = text; }
+          })
+        );
+
+        // Check common JSON file names first
+        const streamData =
+          extracted["stream.json"] ||
+          extracted["data.json"]   ||
+          extracted["info.json"]   ||
+          null;
+
+        embedUrl =
+          streamData?.dataLink ||
+          streamData?.link     ||
+          streamData?.url      ||
+          streamData?.embed    ||
+          streamData?.src      ||
+          null;
+
+        // Fallback: scan all extracted files if named lookup failed
+        if (!embedUrl) {
+          for (const val of Object.values(extracted)) {
+            if (typeof val === "object" && val !== null) {
+              embedUrl = val.dataLink || val.link || val.url || val.embed || val.src || null;
+              if (embedUrl) break;
+            }
+            // Plain-text file whose entire content is a URL
+            if (typeof val === "string" && /^https?:\/\//.test(val.trim())) {
+              embedUrl = val.trim();
+              break;
+            }
+          }
+        }
+
+      // ── JSON path (legacy / fallback behaviour) ──────────────────────────
+      } else {
+        const data = await res.json();
+        embedUrl = data.dataLink || data.link || data.url || data.embed;
+      }
+
+      if (!embedUrl) throw new Error("No stream URL found in API response");
 
       wrap.innerHTML = `
         <iframe
