@@ -231,8 +231,8 @@ const updateEpLabel = () => {
       let embedUrl = null;
 
       if (currentProvider === 'megaplay') {
-        // ── MegaPlay: direct iframe using AniList id + episode + lang ──
-        embedUrl = `https://megaplay.buzz/stream/ani/${encodeURIComponent(currentAnimeId)}/${currentEpNum}/${currentLang}`;
+        // ── MegaPlay: AniList id must be a plain integer — no encoding ──
+        embedUrl = `https://megaplay.buzz/stream/ani/${parseInt(currentAnimeId)}/${currentEpNum}/${currentLang}`;
       } else {
         // ── Default: reanime API (JSON or ZIP) ──────────────────────
         const apiUrl = `https://reanime.to/api/flix/${encodeURIComponent(currentAnimeId)}/${currentEpNum}`;
@@ -304,6 +304,10 @@ const updateEpLabel = () => {
         if (!embedUrl) throw new Error("No stream URL found in API response");
       }
 
+      // MegaPlay requires the Referer header to validate the embed domain.
+      // reanime's proxied stream URLs need no-referrer for privacy/CORS.
+      const refPolicy = currentProvider === 'megaplay' ? 'origin' : 'no-referrer';
+
       wrap.innerHTML = `
         <iframe
           id="anime-iframe"
@@ -311,7 +315,7 @@ const updateEpLabel = () => {
           src="${embedUrl}"
           allowfullscreen
           allow="autoplay; fullscreen; picture-in-picture"
-          referrerpolicy="no-referrer"
+          referrerpolicy="${refPolicy}"
           frameborder="0"
           style="width:100%; height:100%; border:none; display:block;">
         </iframe>`;
@@ -349,4 +353,4 @@ const updateEpLabel = () => {
 })();
 
 window.WatchPage = WatchPage;
-      
+                                     
