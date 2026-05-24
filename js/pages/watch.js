@@ -5,6 +5,8 @@ const WatchPage = (() => {
   let currentAnimeId = null;
   let currentEpNum   = null;
   let allEpisodes    = [];
+  let currentProvider = 'reanime';   // 'reanime' | 'megaplay'
+  let currentLang     = 'sub';       // 'sub' | 'dub'  (MegaPlay only)
 
   // ── Mobile Responsive Styles ───────────────────────────────
   const mobileStyles = `
@@ -32,7 +34,9 @@ const WatchPage = (() => {
   // ── Main render ────────────────────────────────────────────
   const render = async ({ id, ep }) => {
     if (!id) { UI.error("No anime specified."); return; }
-    currentAnimeId = id;
+    currentAnimeId  = id;
+    currentProvider = 'reanime';
+    currentLang     = 'sub';
 
     UI.setTitle("Loading…");
     UI.render(`
@@ -51,6 +55,17 @@ const WatchPage = (() => {
               <button class="tool-btn" id="next-ep-btn" title="Next">
                 <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9,18 15,12 9,6"/></svg>
               </button>
+            </div>
+
+            <div class="player-toolbar__right" style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
+              <span style="font-size:11px; font-weight:700; letter-spacing:0.6px; text-transform:uppercase; opacity:0.5;">Source</span>
+              <button class="type-btn type-btn--active" id="btn-provider-reanime" onclick="WatchPage._setProvider('reanime')">Default</button>
+              <button class="type-btn" id="btn-provider-megaplay" onclick="WatchPage._setProvider('megaplay')">MegaPlay</button>
+              <span id="lang-controls" style="display:none; align-items:center; gap:6px; margin-left:4px;">
+                <span style="font-size:11px; font-weight:700; opacity:0.3;">|</span>
+                <button class="type-btn type-btn--active" id="btn-lang-sub" onclick="WatchPage._setLang('sub')">SUB</button>
+                <button class="type-btn" id="btn-lang-dub" onclick="WatchPage._setLang('dub')">DUB</button>
+              </span>
             </div>
 
           </div>
@@ -94,6 +109,8 @@ const WatchPage = (() => {
     // Load sidebar and episode list in parallel
     loadSidebarInfo(id);
     await loadEpisodeList(id);
+
+    updateProviderUI();
 
     const targetNum = ep ? parseInt(ep) : 1;
     const targetEp  = allEpisodes.find(e => e.number === targetNum) || allEpisodes[0];
@@ -172,81 +189,120 @@ const updateEpLabel = () => {
     loadPlayer();
   };
 
-  // ── Player — fetch reanime API (JSON or ZIP), inject into iframe ──
+  // ── Provider UI helpers ────────────────────────────────────
+  const updateProviderUI = () => {
+    const btnReanime  = document.getElementById("btn-provider-reanime");
+    const btnMegaplay = document.getElementById("btn-provider-megaplay");
+    const langCtrl    = document.getElementById("lang-controls");
+    if (!btnReanime) return;
+
+    if (currentProvider === 'megaplay') {
+      btnReanime.classList.remove("type-btn--active");
+      btnMegaplay.classList.add("type-btn--active");
+      if (langCtrl) langCtrl.style.display = "flex";
+    } else {
+      btnMegaplay.classList.remove("type-btn--active");
+      btnReanime.classList.add("type-btn--active");
+      if (langCtrl) langCtrl.style.display = "none";
+    }
+    updateLangUI();
+  };
+
+  const updateLangUI = () => {
+    const btnSub = document.getElementById("btn-lang-sub");
+    const btnDub = document.getElementById("btn-lang-dub");
+    if (!btnSub) return;
+    if (currentLang === 'dub') {
+      btnSub.classList.remove("type-btn--active");
+      btnDub.classList.add("type-btn--active");
+    } else {
+      btnDub.classList.remove("type-btn--active");
+      btnSub.classList.add("type-btn--active");
+    }
+  };
+
+  // ── Player — provider-aware loader ────────────────────────
   const loadPlayer = async () => {
     const wrap = document.getElementById("player-wrap");
     if (!wrap || !currentEpNum) return;
     wrap.innerHTML = `<div class="player-loader" style="display:flex; height:100%; justify-content:center; align-items:center;"><div class="spinner">Loading...</div></div>`;
 
     try {
-      const apiUrl = `https://reanime.to/api/flix/${encodeURIComponent(currentAnimeId)}/${currentEpNum}`;
-      const res = await fetch(API.proxy(apiUrl));
-      if (!res.ok) throw new Error(`API error ${res.status}`);
-
-      const contentType = res.headers.get("content-type") || "";
       let embedUrl = null;
 
-      // ── ZIP path (new reanime behaviour) ────────────────────────────────
-      if (
-        contentType.includes("application/zip") ||
-        contentType.includes("application/octet-stream") ||
-        contentType.includes("application/x-zip")
-      ) {
-        const buffer = await res.arrayBuffer();
+      if (currentProvider === 'megaplay') {
+        // ── MegaPlay: direct iframe using AniList id + episode + lang ──
+        embedUrl = `https://megaplay.buzz/stream/ani/${encodeURIComponent(currentAnimeId)}/${currentEpNum}/${currentLang}`;
+      } else {
+        // ── Default: reanime API (JSON or ZIP) ──────────────────────
+        const apiUrl = `https://reanime.to/api/flix/${encodeURIComponent(currentAnimeId)}/${currentEpNum}`;
+        const res = await fetch(API.proxy(apiUrl));
+        if (!res.ok) throw new Error(`API error ${res.status}`);
 
-        // Confirm ZIP magic bytes (PK\x03\x04) in case content-type is wrong
-        const magic = new Uint8Array(buffer, 0, 4);
-        if (magic[0] !== 0x50 || magic[1] !== 0x4B) throw new Error("Unexpected binary format from API");
+        const contentType = res.headers.get("content-type") || "";
 
-        const zip = await JSZip.loadAsync(buffer);
-        const extracted = {};
+        // ── ZIP path (new reanime behaviour) ──────────────────────────
+        if (
+          contentType.includes("application/zip") ||
+          contentType.includes("application/octet-stream") ||
+          contentType.includes("application/x-zip")
+        ) {
+          const buffer = await res.arrayBuffer();
 
-        await Promise.all(
-          Object.entries(zip.files).map(async ([name, file]) => {
-            if (file.dir) return;
-            const text = await file.async("string");
-            try { extracted[name] = JSON.parse(text); }
-            catch { extracted[name] = text; }
-          })
-        );
+          // Confirm ZIP magic bytes (PK\x03\x04) in case content-type is wrong
+          const magic = new Uint8Array(buffer, 0, 4);
+          if (magic[0] !== 0x50 || magic[1] !== 0x4B) throw new Error("Unexpected binary format from API");
 
-        // Check common JSON file names first
-        const streamData =
-          extracted["stream.json"] ||
-          extracted["data.json"]   ||
-          extracted["info.json"]   ||
-          null;
+          const zip = await JSZip.loadAsync(buffer);
+          const extracted = {};
 
-        embedUrl =
-          streamData?.dataLink ||
-          streamData?.link     ||
-          streamData?.url      ||
-          streamData?.embed    ||
-          streamData?.src      ||
-          null;
+          await Promise.all(
+            Object.entries(zip.files).map(async ([name, file]) => {
+              if (file.dir) return;
+              const text = await file.async("string");
+              try { extracted[name] = JSON.parse(text); }
+              catch { extracted[name] = text; }
+            })
+          );
 
-        // Fallback: scan all extracted files if named lookup failed
-        if (!embedUrl) {
-          for (const val of Object.values(extracted)) {
-            if (typeof val === "object" && val !== null) {
-              embedUrl = val.dataLink || val.link || val.url || val.embed || val.src || null;
-              if (embedUrl) break;
-            }
-            // Plain-text file whose entire content is a URL
-            if (typeof val === "string" && /^https?:\/\//.test(val.trim())) {
-              embedUrl = val.trim();
-              break;
+          // Check common JSON file names first
+          const streamData =
+            extracted["stream.json"] ||
+            extracted["data.json"]   ||
+            extracted["info.json"]   ||
+            null;
+
+          embedUrl =
+            streamData?.dataLink ||
+            streamData?.link     ||
+            streamData?.url      ||
+            streamData?.embed    ||
+            streamData?.src      ||
+            null;
+
+          // Fallback: scan all extracted files if named lookup failed
+          if (!embedUrl) {
+            for (const val of Object.values(extracted)) {
+              if (typeof val === "object" && val !== null) {
+                embedUrl = val.dataLink || val.link || val.url || val.embed || val.src || null;
+                if (embedUrl) break;
+              }
+              // Plain-text file whose entire content is a URL
+              if (typeof val === "string" && /^https?:\/\//.test(val.trim())) {
+                embedUrl = val.trim();
+                break;
+              }
             }
           }
+
+        // ── JSON path (legacy / fallback behaviour) ──────────────────
+        } else {
+          const data = await res.json();
+          embedUrl = data.dataLink || data.link || data.url || data.embed;
         }
 
-      // ── JSON path (legacy / fallback behaviour) ──────────────────────────
-      } else {
-        const data = await res.json();
-        embedUrl = data.dataLink || data.link || data.url || data.embed;
+        if (!embedUrl) throw new Error("No stream URL found in API response");
       }
-
-      if (!embedUrl) throw new Error("No stream URL found in API response");
 
       wrap.innerHTML = `
         <iframe
@@ -275,7 +331,22 @@ const updateEpLabel = () => {
     if (ep) selectEp(ep);
   };
 
-  return { render, _selectByNum };
+  const _setProvider = (provider) => {
+    if (currentProvider === provider) return;
+    currentProvider = provider;
+    updateProviderUI();
+    loadPlayer();
+  };
+
+  const _setLang = (lang) => {
+    if (currentLang === lang) return;
+    currentLang = lang;
+    updateLangUI();
+    loadPlayer();
+  };
+
+  return { render, _selectByNum, _setProvider, _setLang };
 })();
 
 window.WatchPage = WatchPage;
+      
