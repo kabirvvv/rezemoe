@@ -1,116 +1,117 @@
 // ============================================================
-// WATCH / PLAYER PAGE — reanime.to (AniList ID + episode number)
+// WATCH / PLAYER PAGE — AniList ID + episode number
 // ============================================================
 const WatchPage = (() => {
-  let currentAnimeId = null;
-  let currentEpNum   = null;
-  let allEpisodes    = [];
-  let currentProvider = 'reanime';   // 'reanime' | 'megaplay'
-  let currentLang     = 'sub';       // 'sub' | 'dub'  (MegaPlay only)
-
-  // ── Mobile Responsive Styles ───────────────────────────────
-  const mobileStyles = `
-    <style>
-      .watch-page { display: flex; flex-direction: row; gap: 20px; width: 100%; max-width: 1400px; margin: 0 auto; padding: 15px; box-sizing: border-box; }
-      .player-area { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 10px; }
-      .player-wrap { width: 100%; aspect-ratio: 16/9; background: #000; border-radius: 8px; overflow: hidden; position: relative; }
-      .watch-sidebar { width: 320px; flex-shrink: 0; display: flex; flex-direction: column; gap: 15px; }
-      .ep-list { max-height: 500px; overflow-y: auto; scroll-behavior: smooth; }
-
-      @media (max-width: 900px) {
-        .watch-page { flex-direction: column; padding: 0; gap: 15px; }
-        .watch-sidebar { width: 100%; padding: 0 15px; box-sizing: border-box; }
-        .player-wrap { border-radius: 0; }
-        .player-toolbar { display: flex; flex-direction: column; gap: 12px; padding: 10px 15px; }
-        .player-toolbar__left, .player-toolbar__right { display: flex; justify-content: space-between; align-items: center; width: 100%; gap: 10px; }
-        .tool-btn, .type-btn, .ep-search { min-height: 44px; font-size: 16px; padding: 8px 16px; }
-        .tool-btn { min-width: 44px; display: flex; align-items: center; justify-content: center; }
-        .ep-list { max-height: 400px; }
-        .ep-item { padding: 14px 15px; min-height: 48px; display: flex; align-items: center; }
-      }
-    </style>
-  `;
+  let currentAnimeId  = null;
+  let currentEpNum    = null;
+  let allEpisodes     = [];
+  let currentProvider = 'reanime';  // 'reanime' | 'megaplay'
+  let currentLang     = 'sub';      // 'sub' | 'dub'
 
   // ── Main render ────────────────────────────────────────────
   const render = async ({ id, ep }) => {
-    if (!id) { UI.error("No anime specified."); return; }
+    if (!id) { UI.error('No anime specified.'); return; }
     currentAnimeId  = id;
     currentProvider = 'reanime';
     currentLang     = 'sub';
 
-    UI.setTitle("Loading…");
+    UI.setTitle('Loading…');
     UI.render(`
-      ${mobileStyles}
       <div class="watch-page" id="watch-page">
+
+        <!-- LEFT: player column -->
         <div class="player-area">
+
+          <!-- Video -->
           <div class="player-wrap" id="player-wrap">
             <div class="player-loader"><div class="spinner"></div></div>
           </div>
+
+          <!-- Info strip under player -->
+          <div class="player-infobar" id="player-infobar">
+            <div class="player-infobar__title" id="infobar-title">Loading…</div>
+            <span class="player-infobar__ep" id="infobar-ep"></span>
+          </div>
+
+          <!-- Toolbar -->
           <div class="player-toolbar" id="player-toolbar">
+
+            <!-- Left: prev / ep label / next -->
             <div class="player-toolbar__left">
-              <button class="tool-btn" id="prev-ep-btn" title="Previous">
-                <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2"><polyline points="15,18 9,12 15,6"/></svg>
+              <button class="tool-btn" id="prev-ep-btn" title="Previous episode">
+                <svg viewBox="0 0 24 24"><polyline points="15,18 9,12 15,6"/></svg>
               </button>
-              <span class="ep-label" id="ep-label" style="font-weight:600; text-align:center; flex:1;">Loading…</span>
-              <button class="tool-btn" id="next-ep-btn" title="Next">
-                <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9,18 15,12 9,6"/></svg>
+              <span class="ep-label" id="ep-label">Loading…</span>
+              <button class="tool-btn" id="next-ep-btn" title="Next episode">
+                <svg viewBox="0 0 24 24"><polyline points="9,18 15,12 9,6"/></svg>
               </button>
             </div>
 
-            <div class="player-toolbar__right" style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
-              <span style="font-size:11px; font-weight:700; letter-spacing:0.6px; text-transform:uppercase; opacity:0.5;">Source</span>
-              <button class="type-btn type-btn--active" id="btn-provider-reanime" onclick="WatchPage._setProvider('reanime')">Default</button>
-              <button class="type-btn" id="btn-provider-megaplay" onclick="WatchPage._setProvider('megaplay')">MegaPlay</button>
-              <span id="lang-controls" style="display:none; align-items:center; gap:6px; margin-left:4px;">
-                <span style="font-size:11px; font-weight:700; opacity:0.3;">|</span>
-                <button class="type-btn type-btn--active" id="btn-lang-sub" onclick="WatchPage._setLang('sub')">SUB</button>
-                <button class="type-btn" id="btn-lang-dub" onclick="WatchPage._setLang('dub')">DUB</button>
-              </span>
+            <!-- Right: provider + sub/dub -->
+            <div class="player-toolbar__right">
+              <span class="toolbar-label">Source</span>
+              <div class="type-toggle">
+                <button class="type-btn type-btn--active" id="btn-provider-reanime"
+                        onclick="WatchPage._setProvider('reanime')">Default</button>
+                <button class="type-btn" id="btn-provider-megaplay"
+                        onclick="WatchPage._setProvider('megaplay')">MegaPlay</button>
+              </div>
+              <div class="type-toggle" id="lang-toggle" style="display:none;">
+                <button class="type-btn type-btn--active" id="btn-lang-sub"
+                        onclick="WatchPage._setLang('sub')">SUB</button>
+                <button class="type-btn" id="btn-lang-dub"
+                        onclick="WatchPage._setLang('dub')">DUB</button>
+              </div>
             </div>
 
           </div>
         </div>
 
+        <!-- RIGHT: sidebar -->
         <div class="watch-sidebar">
+
+          <!-- Anime card -->
           <div class="sidebar-anime-info" id="sidebar-info">
-            <div class="skeleton-box" style="height:96px;border-radius:8px"></div>
+            <div class="skeleton-box" style="height:90px;border-radius:var(--radius);"></div>
           </div>
-          <div class="sidebar-eps" style="display:flex; flex-direction:column; gap:10px;">
-            <div class="sidebar-eps__header" style="display:flex; justify-content:space-between; align-items:center;">
-              <span style="font-weight:bold; font-size:1.1rem;">Episodes</span>
-              <input class="ep-search ep-search--sm" id="sidebar-ep-search" type="text" placeholder="Search…">
+
+          <!-- Episode list -->
+          <div class="sidebar-eps">
+            <div class="sidebar-eps__header">
+              <span>Episodes</span>
+              <input class="ep-search ep-search--sm" id="sidebar-ep-search"
+                     type="text" placeholder="Search…" autocomplete="off">
             </div>
             <div class="ep-list" id="ep-list">
-              ${Array(14).fill('<div class="ep-item ep-item--skel skeleton-box" style="margin-bottom:8px;"></div>').join("")}
+              ${Array(12).fill('<div class="ep-item ep-item--skel skeleton-box"></div>').join('')}
             </div>
           </div>
+
         </div>
       </div>
     `);
 
     // Wire prev / next
-    document.getElementById("prev-ep-btn").addEventListener("click", () => {
+    document.getElementById('prev-ep-btn').addEventListener('click', () => {
       const idx = allEpisodes.findIndex(e => e.number === currentEpNum);
       if (idx > 0) selectEp(allEpisodes[idx - 1]);
     });
-    document.getElementById("next-ep-btn").addEventListener("click", () => {
+    document.getElementById('next-ep-btn').addEventListener('click', () => {
       const idx = allEpisodes.findIndex(e => e.number === currentEpNum);
       if (idx >= 0 && idx < allEpisodes.length - 1) selectEp(allEpisodes[idx + 1]);
     });
 
     // Episode search filter
-    document.getElementById("sidebar-ep-search").addEventListener("input", (e) => {
+    document.getElementById('sidebar-ep-search').addEventListener('input', (e) => {
       const q = e.target.value.toLowerCase();
       renderEpList(allEpisodes.filter(ep =>
-        String(ep.number).includes(q) || (ep.title || "").toLowerCase().includes(q)
+        String(ep.number).includes(q) || (ep.title || '').toLowerCase().includes(q)
       ), currentEpNum);
     });
 
-    // Load sidebar and episode list in parallel
+    // Load sidebar info + episode list
     loadSidebarInfo(id);
     await loadEpisodeList(id);
-
-    updateProviderUI();
 
     const targetNum = ep ? parseInt(ep) : 1;
     const targetEp  = allEpisodes.find(e => e.number === targetNum) || allEpisodes[0];
@@ -118,14 +119,9 @@ const WatchPage = (() => {
       currentEpNum = targetEp.number;
       updateEpLabel();
       renderEpList(allEpisodes, currentEpNum);
+      updateProviderUI();
       loadPlayer();
     }
-  };
-
-  // ── Helpers ────────────────────────────────────────────────
-const updateEpLabel = () => {
-    const label = document.getElementById("ep-label");
-    if (label) label.textContent = `EP ${currentEpNum}`;
   };
 
   // ── Sidebar info ───────────────────────────────────────────
@@ -133,22 +129,32 @@ const updateEpLabel = () => {
     try {
       const raw  = await API.getAnimeInfo(id);
       const info = raw.anime?.info || raw.info || raw;
-      const title  = info.name  || info.title || "";
-      const poster = info.poster || info.image || "";
-      const type   = info.stats?.type || info.type || "";
-      document.getElementById("sidebar-info").innerHTML = `
+      const title  = info.name  || info.title || '';
+      const poster = info.poster || info.image || '';
+      const type   = info.stats?.type || info.type || '';
+      const score  = info.stats?.rating || info.score || '';
+      const eps    = info.stats?.episodes?.sub || info.episodes || '';
+
+      document.getElementById('sidebar-info').innerHTML = `
         <a class="sidebar-anime-card"
            href="#anime?id=${encodeURIComponent(id)}"
-           onclick="event.preventDefault();Router.navigate('anime?id=${encodeURIComponent(id)}')"
-           style="display:flex; gap:15px; text-decoration:none; color:inherit; align-items:center;">
-          <img src="${poster}" alt="${title}" onerror="this.src='assets/placeholder.svg'"
-               style="width:60px; height:85px; object-fit:cover; border-radius:6px;">
-          <div>
-            <p class="sidebar-anime-title" style="margin:0; font-weight:bold; font-size:1.1rem; line-height:1.2;">${title}</p>
-            <p class="sidebar-anime-type"  style="margin:5px 0 0; opacity:0.7; font-size:0.9rem;">${type}</p>
+           onclick="event.preventDefault();Router.navigate('anime?id=${encodeURIComponent(id)}')">
+          <img src="${poster}" alt="${title}" onerror="this.src='assets/placeholder.svg'">
+          <div class="sidebar-anime-meta">
+            <p class="sidebar-anime-title">${title}</p>
+            <div class="sidebar-anime-tags">
+              ${type  ? `<span class="badge badge--type">${type}</span>`  : ''}
+              ${score ? `<span class="badge badge--score">⭐ ${score}</span>` : ''}
+              ${eps   ? `<span class="badge badge--eps">${eps} eps</span>` : ''}
+            </div>
           </div>
         </a>`;
+
       UI.setTitle(title);
+
+      // Also update infobar title
+      const infobarTitle = document.getElementById('infobar-title');
+      if (infobarTitle) infobarTitle.textContent = title;
     } catch { /* silent */ }
   };
 
@@ -161,152 +167,126 @@ const updateEpLabel = () => {
   };
 
   const renderEpList = (episodes, activeNum) => {
-    const list = document.getElementById("ep-list");
+    const list = document.getElementById('ep-list');
     if (!list) return;
     list.innerHTML = episodes.map(ep => {
       const active = ep.number === activeNum;
       return `
-        <div class="ep-item ${active ? "ep-item--active" : ""}"
-             onclick="WatchPage._selectByNum(${ep.number})"
-             style="cursor:pointer; display:flex; gap:10px; border-radius:6px; margin-bottom:5px; transition:background 0.2s;">
-          <span class="ep-item__num"   style="min-width:30px; font-weight:bold;">${ep.number}</span>
-          <span class="ep-item__title" style="white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${ep.title || "Episode " + ep.number}</span>
+        <div class="ep-item ${active ? 'ep-item--active' : ''}"
+             onclick="WatchPage._selectByNum(${ep.number})">
+          <span class="ep-item__num">${ep.number}</span>
+          <span class="ep-item__title">${ep.title || 'Episode ' + ep.number}</span>
         </div>`;
-    }).join("");
+    }).join('');
 
-    const el = list.querySelector(".ep-item--active");
-    if (el) setTimeout(() => el.scrollIntoView({ behavior: "smooth", block: "center" }), 100);
+    const el = list.querySelector('.ep-item--active');
+    if (el) setTimeout(() => el.scrollIntoView({ behavior: 'smooth', block: 'center' }), 120);
   };
 
+  // ── Episode selection ──────────────────────────────────────
   const selectEp = (ep) => {
     currentEpNum = ep.number;
     updateEpLabel();
     renderEpList(allEpisodes, currentEpNum);
-    window.history.replaceState(null, "", `#watch?id=${encodeURIComponent(currentAnimeId)}&ep=${currentEpNum}`);
-    if (window.innerWidth <= 900) {
-      document.getElementById("player-wrap")?.scrollIntoView({ behavior: "smooth" });
+    window.history.replaceState(null, '', `#watch?id=${encodeURIComponent(currentAnimeId)}&ep=${currentEpNum}`);
+    if (window.innerWidth <= 1100) {
+      document.getElementById('player-wrap')?.scrollIntoView({ behavior: 'smooth' });
     }
     loadPlayer();
   };
 
-  // ── Provider UI helpers ────────────────────────────────────
-  const updateProviderUI = () => {
-    const btnReanime  = document.getElementById("btn-provider-reanime");
-    const btnMegaplay = document.getElementById("btn-provider-megaplay");
-    const langCtrl    = document.getElementById("lang-controls");
-    if (!btnReanime) return;
+  // ── Label helpers ──────────────────────────────────────────
+  const updateEpLabel = () => {
+    const label = document.getElementById('ep-label');
+    if (label) label.textContent = `EP ${currentEpNum}`;
+    const infoEp = document.getElementById('infobar-ep');
+    if (infoEp) infoEp.textContent = `Episode ${currentEpNum}`;
+  };
 
+  // ── Provider / lang UI ─────────────────────────────────────
+  const updateProviderUI = () => {
+    const btnR   = document.getElementById('btn-provider-reanime');
+    const btnM   = document.getElementById('btn-provider-megaplay');
+    const langTg = document.getElementById('lang-toggle');
+    if (!btnR) return;
     if (currentProvider === 'megaplay') {
-      btnReanime.classList.remove("type-btn--active");
-      btnMegaplay.classList.add("type-btn--active");
-      if (langCtrl) langCtrl.style.display = "flex";
+      btnR.classList.remove('type-btn--active');
+      btnM.classList.add('type-btn--active');
+      if (langTg) langTg.style.display = 'flex';
     } else {
-      btnMegaplay.classList.remove("type-btn--active");
-      btnReanime.classList.add("type-btn--active");
-      if (langCtrl) langCtrl.style.display = "none";
+      btnM.classList.remove('type-btn--active');
+      btnR.classList.add('type-btn--active');
+      if (langTg) langTg.style.display = 'none';
     }
     updateLangUI();
   };
 
   const updateLangUI = () => {
-    const btnSub = document.getElementById("btn-lang-sub");
-    const btnDub = document.getElementById("btn-lang-dub");
-    if (!btnSub) return;
+    const btnS = document.getElementById('btn-lang-sub');
+    const btnD = document.getElementById('btn-lang-dub');
+    if (!btnS) return;
     if (currentLang === 'dub') {
-      btnSub.classList.remove("type-btn--active");
-      btnDub.classList.add("type-btn--active");
+      btnS.classList.remove('type-btn--active');
+      btnD.classList.add('type-btn--active');
     } else {
-      btnDub.classList.remove("type-btn--active");
-      btnSub.classList.add("type-btn--active");
+      btnD.classList.remove('type-btn--active');
+      btnS.classList.add('type-btn--active');
     }
   };
 
-  // ── Player — provider-aware loader ────────────────────────
+  // ── Player loader ──────────────────────────────────────────
   const loadPlayer = async () => {
-    const wrap = document.getElementById("player-wrap");
+    const wrap = document.getElementById('player-wrap');
     if (!wrap || !currentEpNum) return;
-    wrap.innerHTML = `<div class="player-loader" style="display:flex; height:100%; justify-content:center; align-items:center;"><div class="spinner">Loading...</div></div>`;
+    wrap.innerHTML = `<div class="player-loader"><div class="spinner"></div></div>`;
 
     try {
-      let embedUrl = null;
+      let embedUrl  = null;
+      const refPolicy = currentProvider === 'megaplay' ? 'origin' : 'no-referrer';
 
       if (currentProvider === 'megaplay') {
-        // ── MegaPlay: AniList id must be a plain integer — no encoding ──
         embedUrl = `https://megaplay.buzz/stream/ani/${parseInt(currentAnimeId)}/${currentEpNum}/${currentLang}`;
+
       } else {
-        // ── Default: reanime API (JSON or ZIP) ──────────────────────
+        // reanime — JSON or ZIP
         const apiUrl = `https://reanime.to/api/flix/${encodeURIComponent(currentAnimeId)}/${currentEpNum}`;
-        const res = await fetch(API.proxy(apiUrl));
+        const res    = await fetch(API.proxy(apiUrl));
         if (!res.ok) throw new Error(`API error ${res.status}`);
 
-        const contentType = res.headers.get("content-type") || "";
+        const ct = res.headers.get('content-type') || '';
 
-        // ── ZIP path (new reanime behaviour) ──────────────────────────
-        if (
-          contentType.includes("application/zip") ||
-          contentType.includes("application/octet-stream") ||
-          contentType.includes("application/x-zip")
-        ) {
+        if (ct.includes('application/zip') || ct.includes('application/octet-stream') || ct.includes('application/x-zip')) {
           const buffer = await res.arrayBuffer();
+          const magic  = new Uint8Array(buffer, 0, 4);
+          if (magic[0] !== 0x50 || magic[1] !== 0x4B) throw new Error('Unexpected binary format from API');
 
-          // Confirm ZIP magic bytes (PK\x03\x04) in case content-type is wrong
-          const magic = new Uint8Array(buffer, 0, 4);
-          if (magic[0] !== 0x50 || magic[1] !== 0x4B) throw new Error("Unexpected binary format from API");
-
-          const zip = await JSZip.loadAsync(buffer);
+          const zip       = await JSZip.loadAsync(buffer);
           const extracted = {};
+          await Promise.all(Object.entries(zip.files).map(async ([name, file]) => {
+            if (file.dir) return;
+            const text = await file.async('string');
+            try { extracted[name] = JSON.parse(text); } catch { extracted[name] = text; }
+          }));
 
-          await Promise.all(
-            Object.entries(zip.files).map(async ([name, file]) => {
-              if (file.dir) return;
-              const text = await file.async("string");
-              try { extracted[name] = JSON.parse(text); }
-              catch { extracted[name] = text; }
-            })
-          );
+          const streamData = extracted['stream.json'] || extracted['data.json'] || extracted['info.json'] || null;
+          embedUrl = streamData?.dataLink || streamData?.link || streamData?.url || streamData?.embed || streamData?.src || null;
 
-          // Check common JSON file names first
-          const streamData =
-            extracted["stream.json"] ||
-            extracted["data.json"]   ||
-            extracted["info.json"]   ||
-            null;
-
-          embedUrl =
-            streamData?.dataLink ||
-            streamData?.link     ||
-            streamData?.url      ||
-            streamData?.embed    ||
-            streamData?.src      ||
-            null;
-
-          // Fallback: scan all extracted files if named lookup failed
           if (!embedUrl) {
             for (const val of Object.values(extracted)) {
-              if (typeof val === "object" && val !== null) {
+              if (typeof val === 'object' && val !== null) {
                 embedUrl = val.dataLink || val.link || val.url || val.embed || val.src || null;
                 if (embedUrl) break;
               }
-              // Plain-text file whose entire content is a URL
-              if (typeof val === "string" && /^https?:\/\//.test(val.trim())) {
-                embedUrl = val.trim();
-                break;
-              }
+              if (typeof val === 'string' && /^https?:\/\//.test(val.trim())) { embedUrl = val.trim(); break; }
             }
           }
-
-        // ── JSON path (legacy / fallback behaviour) ──────────────────
         } else {
           const data = await res.json();
           embedUrl = data.dataLink || data.link || data.url || data.embed;
         }
 
-        if (!embedUrl) throw new Error("No stream URL found in API response");
+        if (!embedUrl) throw new Error('No stream URL found in API response');
       }
-
-      // MegaPlay requires the Referer header to validate the embed domain.
-      // reanime's proxied stream URLs need no-referrer for privacy/CORS.
-      const refPolicy = currentProvider === 'megaplay' ? 'origin' : 'no-referrer';
 
       wrap.innerHTML = `
         <iframe
@@ -317,19 +297,20 @@ const updateEpLabel = () => {
           allow="autoplay; fullscreen; picture-in-picture"
           referrerpolicy="${refPolicy}"
           frameborder="0"
-          style="width:100%; height:100%; border:none; display:block;">
+          style="width:100%;height:100%;border:none;display:block;">
         </iframe>`;
+
     } catch (err) {
       wrap.innerHTML = `
-        <div style="display:flex; height:100%; justify-content:center; align-items:center;
-                    color:#fff; flex-direction:column; gap:10px; padding:20px; text-align:center;">
-          <span style="font-size:1.5rem;">⚠️</span>
-          <span style="font-weight:600;">Failed to load player</span>
-          <span style="opacity:0.6; font-size:0.85rem;">${err.message}</span>
+        <div class="player-err">
+          <span style="font-size:2rem;">⚠️</span>
+          <p>Failed to load player</p>
+          <small>${err.message}</small>
         </div>`;
     }
   };
 
+  // ── Public API ─────────────────────────────────────────────
   const _selectByNum = (num) => {
     const ep = allEpisodes.find(e => e.number === num);
     if (ep) selectEp(ep);
@@ -353,4 +334,3 @@ const updateEpLabel = () => {
 })();
 
 window.WatchPage = WatchPage;
-                                     
