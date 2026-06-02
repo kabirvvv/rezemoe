@@ -9,11 +9,42 @@ const WatchPage = (() => {
   let currentLang     = 'sub';       // 'sub' | 'dub'  (MegaPlay only)
 
   // ── Mobile Responsive Styles ───────────────────────────────
-  const mobileStyles = `
+ const mobileStyles = `
     <style>
-      .watch-page { display: flex; flex-direction: row; gap: 20px; width: 100%; max-width: 1400px; margin: 0 auto; padding: 15px; box-sizing: border-box; }
-      .player-area { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 10px; }
+      .watch-page { display: flex; flex-direction: row; gap: 20px; width: 100%; max-width: 1400px; margin: 0 auto; padding: 15px; box-sizing: border-box; color: #fff; }
+      .player-area { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 15px; }
       .player-wrap { width: 100%; aspect-ratio: 16/9; background: #000; border-radius: 8px; overflow: hidden; position: relative; }
+      
+      /* ── Added Toolbar & Button Base Styles ── */
+      .player-toolbar { display: flex; justify-content: space-between; align-items: center; gap: 15px; padding: 10px 0; }
+      .player-toolbar__left, .player-toolbar__right { display: flex; align-items: center; gap: 10px; }
+      
+      .tool-btn, .type-btn {
+        background: #242428;
+        color: #eee;
+        border: 1px solid #3a3a40;
+        padding: 6px 14px;
+        border-radius: 4px;
+        cursor: pointer;
+        font-weight: 500;
+        font-size: 13px;
+        transition: all 0.2s ease;
+      }
+      
+      .tool-btn:hover, .type-btn:hover {
+        background: #323238;
+        color: #fff;
+        border-color: #52525a;
+      }
+      
+      /* Active state style (e.g., accent color for selected provider/lang) */
+      .type-btn--active {
+        background: #ff5c5c; /* Change this to your site's accent color */
+        color: #fff;
+        border-color: transparent;
+        font-weight: 600;
+      }
+      
       .watch-sidebar { width: 320px; flex-shrink: 0; display: flex; flex-direction: column; gap: 15px; }
       .ep-list { max-height: 500px; overflow-y: auto; scroll-behavior: smooth; }
 
@@ -23,7 +54,7 @@ const WatchPage = (() => {
         .player-wrap { border-radius: 0; }
         .player-toolbar { display: flex; flex-direction: column; gap: 12px; padding: 10px 15px; }
         .player-toolbar__left, .player-toolbar__right { display: flex; justify-content: space-between; align-items: center; width: 100%; gap: 10px; }
-        .tool-btn, .type-btn, .ep-search { min-height: 44px; font-size: 16px; padding: 8px 16px; }
+        .tool-btn, .type-btn { min-height: 44px; font-size: 16px; padding: 8px 16px; }
         .tool-btn { min-width: 44px; display: flex; align-items: center; justify-content: center; }
         .ep-list { max-height: 400px; }
         .ep-item { padding: 14px 15px; min-height: 48px; display: flex; align-items: center; }
