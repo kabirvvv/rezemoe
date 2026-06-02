@@ -149,7 +149,12 @@ const updateEpLabel = () => {
           </div>
         </a>`;
       UI.setTitle(title);
-    } catch { /* silent */ }
+    }  catch { 
+  document.getElementById("sidebar-info").innerHTML = `
+    <div style="padding: 10px; color: #ff6b6b; text-align: center;">
+      Failed to load info.
+    </div>`;
+}
   };
 
   // ── Episode list ───────────────────────────────────────────
