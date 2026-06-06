@@ -66,7 +66,7 @@ const WatchPage = (() => {
   const render = async ({ id, ep }) => {
     if (!id) { UI.error("No anime specified."); return; }
     currentAnimeId  = id;
-    currentProvider = 'reanime';
+    currentProvider = 'megaplay';
     currentLang     = 'sub';
 
     UI.setTitle("Loading…");
