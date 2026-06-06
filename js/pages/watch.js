@@ -5,7 +5,7 @@ const WatchPage = (() => {
   let currentAnimeId = null;
   let currentEpNum   = null;
   let allEpisodes    = [];
-  let currentProvider = 'reanime';   // 'reanime' | 'megaplay'
+  let currentProvider = 'megaplay';   // 'reanime' | 'megaplay'
   let currentLang     = 'sub';       // 'sub' | 'dub'  (MegaPlay only)
 
   // ── Mobile Responsive Styles ───────────────────────────────
